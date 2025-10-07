@@ -1,0 +1,555 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+interface Settings {
+  flipSound: 'soft' | 'click' | 'chime' | 'none';
+  flipVolume: number;
+  ambientSound: string;
+  ambientVolume: number;
+  backgroundType: 'color' | 'image';
+  backgroundColor: string;
+  backgroundImage: string;
+  blurIntensity: number;
+  lastMode: 'clock' | 'timer' | 'stopwatch';
+  quotes: string[];
+  currentQuoteIndex: number;
+  autoRotateQuotes: boolean;
+}
+
+interface Lap {
+  id: number;
+  time: string;
+  milliseconds: number;
+}
+
+const DEFAULT_QUOTES = [
+  "The expert in anything was once a beginner.",
+  "Success is the sum of small efforts repeated day in and day out.",
+  "Don't watch the clock; do what it does. Keep going.",
+  "The future depends on what you do today.",
+  "Believe you can and you're halfway there.",
+  "Your limitation19s only your imagination.",
+  "Great things never come from comfort zones.",
+  "Dream it. Wish it. Do it.",
+  "Success doesn't just find you. You have to go out and get it.",
+  "The harder you work, the more lucky you get."
+];
+
+const FlipCard: React.FC<{ digit: string; prevDigit: string; isFlipping: boolean }> = ({ digit, prevDigit, isFlipping }) => {
+  return (
+    <div className="relative w-20 h-24 md:w-24 md:h-28">
+      <div className="absolute inset-0 bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
+        <div className="relative h-full">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="relative w-full h-full">
+              <div className={`absolute inset-0 flex items-center justify-center text-white text-4xl md:text-5xl font-bold ${isFlipping ? 'animate-flip' : ''}`}>
+                {digit}
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-transparent opacity-20"></div>
+            </div>
+          </div>
+          <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-gray-700 to-transparent opacity-30"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function SerenaFlipClock() {
+  const [mode, setMode] = useState<'clock' | 'timer' | 'stopwatch'>('clock');
+  const [time, setTime] = useState(new Date());
+  const [timerTime, setTimerTime] = useState(0);
+  const [timerInput, setTimerInput] = useState('00:00:00');
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [stopwatchTime, setStopwatchTime] = useState(0);
+  const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
+  const [laps, setLaps] = useState<Lap[]>([]);
+  const [settings, setSettings] = useState<Settings>({
+    flipSound: 'soft',
+    flipVolume: 0.5,
+    ambientSound: 'none',
+    ambientVolume: 0.3,
+    backgroundType: 'color',
+    backgroundColor: 'bg-pink-100',
+    backgroundImage: '',
+    blurIntensity: 4,
+    lastMode: 'clock',
+    quotes: DEFAULT_QUOTES,
+    currentQuoteIndex: 0,
+    autoRotateQuotes: true
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [customQuote, setCustomQuote] = useState('');
+  const [prevDigits, setPrevDigits] = useState({ h1: '', h2: '', m1: '', m2: '', s1: '', s2: '' });
+  const [isFlipping, setIsFlipping] = useState({ h1: false, h2: false, m1: false, m2: false, s1: false, s2: false });
+  
+  const flipAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const quoteIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('serenaSettings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      setSettings(parsed);
+      setMode(parsed.lastMode || 'clock');
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('serenaSettings', JSON.stringify(settings));
+  }, [settings]);
+
+  useEffect(() => {
+    if (settings.autoRotateQuotes) {
+      quoteIntervalRef.current = setInterval(() => {
+        setSettings(prev => ({
+          ...prev,
+          currentQuoteIndex: (prev.currentQuoteIndex + 1) % prev.quotes.length
+        }));
+      }, 10000);
+    }
+    return () => {
+      if (quoteIntervalRef.current) clearInterval(quoteIntervalRef.current);
+    };
+  }, [settings.autoRotateQuotes, settings.quotes.length]);
+
+  useEffect(() => {
+    const clockInterval = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(clockInterval);
+  }, []);
+
+  useEffect(() => {
+    if (isTimerRunning && timerTime > 0) {
+      intervalRef.current = setInterval(() => {
+        setTimerTime(prev => {
+          if (prev <= 1) {
+            setIsTimerRunning(false);
+            playCompletionSound();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isTimerRunning, timerTime]);
+
+  useEffect(() => {
+    if (isStopwatchRunning) {
+      intervalRef.current = setInterval(() => {
+        setStopwatchTime(prev => prev + 10);
+      }, 10);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isStopwatchRunning]);
+
+  const playFlipSound = () => {
+    if (settings.flipSound === 'none') return;
+    // Simulate flip sound with Web Audio API
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    switch(settings.flipSound) {
+      case 'soft':
+        oscillator.frequency.value = 800;
+        gainNode.gain.value = settings.flipVolume * 0.1;
+        break;
+      case 'click':
+        oscillator.frequency.value = 1200;
+        gainNode.gain.value = settings.flipVolume * 0.05;
+        break;
+      case 'chime':
+        oscillator.frequency.value = 600;
+        gainNode.gain.value = settings.flipVolume * 0.15;
+        break;
+    }
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.05);
+  };
+
+  const playCompletionSound = () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.frequency.value = 1000;
+    gainNode.gain.value = 0.3;
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.5);
+  };
+
+  const formatTime = (date: Date) => {
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    const s = date.getSeconds().toString().padStart(2, '0');
+    return { h1: h[0], h2: h[1], m1: m[0], m2: m[1], s1: s[0], s2: s[1] };
+  };
+
+  const formatTimerTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return { h1: h[0], h2: h[1], m1: m[0], m2: m[1], s1: s[0], s2: s[1] };
+  };
+
+  const formatStopwatchTime = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (totalSeconds % 60).toString().padStart(2, '0');
+    return { h1: h[0], h2: h[1], m1: m[0], m2: m[1], s1: s[0], s2: s[1] };
+  };
+
+  const getCurrentDigits = () => {
+    switch(mode) {
+      case 'clock':
+        return formatTime(time);
+      case 'timer':
+        return formatTimerTime(timerTime);
+      case 'stopwatch':
+        return formatStopwatchTime(stopwatchTime);
+      default:
+        return { h1: '0', h2: '0', m1: '0', m2: '0', s1: '0', s2: '0' };
+    }
+  };
+
+  useEffect(() => {
+    const current = getCurrentDigits();
+    const newFlipping = { h1: false, h2: false, m1: false, m2: false, s1: false, s2: false };
+    
+    Object.keys(current).forEach(key => {
+      if (current[key as keyof typeof current] !== prevDigits[key as keyof typeof prevDigits]) {
+        newFlipping[key as keyof typeof newFlipping] = true;
+        setTimeout(() => {
+          setIsFlipping(prev => ({ ...prev, [key]: false }));
+        }, 600);
+        playFlipSound();
+      }
+    });
+    
+    setIsFlipping(newFlipping);
+    setPrevDigits(current);
+  }, [time, timerTime, stopwatchTime]);
+
+  const handleTimerInput = (value: string) => {
+    const clean = value.replace(/[^0-9:]/g, '');
+    const parts = clean.split(':');
+    if (parts.length > 3) return;
+    
+    let formatted = '';
+    for (let i = 0; i < 3; i++) {
+      if (parts[i]) {
+        if (formatted) formatted += ':';
+        formatted += parts[i].slice(0, 2);
+      }
+    }
+    
+    setTimerInput(formatted);
+  };
+
+  const startTimer = () => {
+    const parts = timerInput.split(':').map(p => parseInt(p) || 0);
+    const seconds = (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+    setTimerTime(seconds);
+    setIsTimerRunning(true);
+  };
+
+  const pauseTimer = () => {
+    setIsTimerRunning(false);
+  };
+
+  const resetTimer = () => {
+    setIsTimerRunning(false);
+    setTimerTime(0);
+    setTimerInput('00:00:00');
+  };
+
+  const startStopwatch = () => {
+    setIsStopwatchRunning(true);
+  };
+
+  const pauseStopwatch = () => {
+    setIsStopwatchRunning(false);
+  };
+
+  const lapStopwatch = () => {
+    const lapTime = formatStopwatchTime(stopwatchTime);
+    setLaps(prev => [...prev, {
+      id: Date.now(),
+      time: `${lapTime.h1}${lapTime.h2}:${lapTime.m1}${lapTime.m2}:${lapTime.s1}${lapTime.s2}`,
+      milliseconds: stopwatchTime
+    }]);
+  };
+
+  const resetStopwatch = () => {
+    setIsStopwatchRunning(false);
+    setStopwatchTime(0);
+    setLaps([]);
+  };
+
+  const handleBackgroundImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setSettings(prev => ({
+          ...prev,
+          backgroundImage: event.target?.result as string,
+          backgroundType: 'image'
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addCustomQuote = () => {
+    if (customQuote.trim()) {
+      setSettings(prev => ({
+        ...prev,
+        quotes: [...prev.quotes, customQuote.trim()]
+      }));
+      setCustomQuote('');
+    }
+  };
+
+  const handleModeChange = (newMode: 'clock' | 'timer' | 'stopwatch') => {
+    setMode(newMode);
+    setSettings(prev => ({ ...prev, lastMode: newMode }));
+  };
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (mode === 'timer') {
+          isTimerRunning ? pauseTimer() : startTimer();
+        } else if (mode === 'stopwatch') {
+          isStopwatchRunning ? pauseStopwatch() : startStopwatch();
+        }
+      } else if (e.code === 'KeyR') {
+        if (mode === 'timer') resetTimer();
+        else if (mode === 'stopwatch') resetStopwatch();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [mode, isTimerRunning, isStopwatchRunning]);
+
+  const digits = getCurrentDigits();
+
+  return (
+    <div className="min-h-screen relative overflow-hidden">
+      <style jsx>{`\n        @keyframes flip {\n          0% { transform: rotateX(0deg); }\n          50% { transform: rotateX(-90deg); }\n          100% { transform: rotateX(0deg); }\n        }\n        .animate-flip {\n          animation: flip 0.6s ease-in-out;\n          transform-style: preserve-3d;\n        }\n      `}</style>
+      
+      {/* Background */}
+      <div className="absolute inset-0">
+        {settings.backgroundType === 'image' && settings.backgroundImage ? (
+          <img 
+            src={settings.backgroundImage} 
+            alt="Background" 
+            className="w-full h-full object-cover"
+            style={{ filter: `blur(${settings.blurIntensity}px) brightness(${1 - settings.blurIntensity * 0.02})` }}
+          />
+        ) : (
+          <div className={`w-full h-full ${settings.backgroundColor}`}></div>
+        )}
+      </div>
+      
+      {/* Main Content */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
+        {/* Brand Name */}
+        <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-8">Serena</h1>
+        
+        {/* Mode Tabs */}
+        <div className="flex gap-2 mb-8">
+          <button
+            onClick={() => handleModeChange('clock')}
+            className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              mode === 'clock' 
+                ? 'bg-gray-800 text-white' 
+                : 'bg-white bg-opacity-80 text-gray-800 hover:bg-opacity-100'
+            }`}
+          >
+            Clock
+          </button>
+          <button
+            onClick={() => handleModeChange('timer')}
+            className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              mode === 'timer' 
+                ? 'bg-gray-800 text-white' 
+                : 'bg-white bg-opacity-80 text-gray-800 hover:bg-opacity-100'
+            }`}
+          >
+            Timer
+          </button>
+          <button
+            onClick={() => handleModeChange('stopwatch')}
+            className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              mode === 'stopwatch' 
+                ? 'bg-gray-800 text-white' 
+                : 'bg-white bg-opacity-80 text-gray-800 hover:bg-opacity-100'
+            }`}
+          >
+            Stopwatch
+          </button>
+        </div>
+        
+        {/* Clock Display */}
+        <div className="flex items-center gap-2 md:gap-4 mb-8">
+          <FlipCard digit={digits.h1} prevDigit={prevDigits.h1} isFlipping={isFlipping.h1} />
+          <FlipCard digit={digits.h2} prevDigit={prevDigits.h2} isFlipping={isFlipping.h2} />
+          <div className="text-4xl md:text-5xl font-bold text-gray-800">:</div>
+          <FlipCard digit={digits.m1} prevDigit={prevDigits.m1} isFlipping={isFlipping.m1} />
+          <FlipCard digit={digits.m2} prevDigit={prevDigits.m2} isFlipping={isFlipping.m2} />
+          <div className="text-4xl md:text-5xl font-bold text-gray-800">:</div>
+          <FlipCard digit={digits.s1} prevDigit={prevDigits.s1} isFlipping={isFlipping.s1} />
+          <FlipCard digit={digits.s2} prevDigit={prevDigits.s2} isFlipping={isFlipping.s2} />
+        </div>
+        
+        {/* Timer Controls */}
+        {mode === 'timer' && (
+          <div className="flex flex-col items-center gap-4">
+            <input
+              type="text"
+              value={timerInput}
+              onChange={(e) => handleTimerInput(e.target.value)}
+              placeholder="HH:MM:SS"
+              className="px-4 py-2 rounded-lg bg-white bg-opacity-80 text-gray-800 text-center text-xl font-semibold"
+              disabled={isTimerRunning}
+            />
+            <div className="flex gap-2">
+              {!isTimerRunning ? (
+                <button
+                  onClick={startTimer}
+                  className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                >
+                  Start
+                </button>
+              ) : (
+                <button
+                  onClick={pauseTimer}
+                  className="px-6 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors"
+                >
+                  Pause
+                </button>
+              )}
+              <button
+                onClick={resetTimer}
+                className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Stopwatch Controls */}
+        {mode === 'stopwatch' && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex gap-2">
+              {!isStopwatchRunning ? (
+                <button
+                  onClick={startStopwatch}
+                  className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                >
+                  Start
+                </button>
+              ) : (
+                <button
+                  onClick={pauseStopwatch}
+                  className="px-6 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors"
+                >
+                  Pause
+                </button>
+              )}
+              <button
+                onClick={lapStopwatch}
+                disabled={!isStopwatchRunning}
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Lap
+              </button>
+              <button
+                onClick={resetStopwatch}
+                className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+            {laps.length > 0 && (
+              <div className="bg-white bg-opacity-80 rounded-lg p-4 max-h-48 overflow-y-auto">
+                <h3 className="font-semibold mb-2">Laps</h3>
+                {laps.map((lap, index) => (
+                  <div key={lap.id} className="text-sm">
+                    Lap {index + 1}: {lap.time}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Quote */}
+        <div className="mt-8 max-w-2xl text-center">
+          <p className="text-lg md:text-xl text-gray-800 font-medium bg-white bg-opacity-80 rounded-lg px-6 py-3">
+            "{settings.quotes[settings.currentQuoteIndex]}"
+          </p>
+          <div className="flex gap-2 mt-2 justify-center">
+            <button
+              onClick={() => setSettings(prev => ({
+                ...prev,
+                currentQuoteIndex: (prev.currentQuoteIndex - 1 + prev.quotes.length) % prev.quotes.length
+              }))}
+              className="px-3 py-1 bg-white bg-opacity-60 rounded text-sm hover:bg-opacity-80 transition-all"
+            >
+              190
+            </button>
+            <button
+              onClick={() => setSettings(prev => ({
+                ...prev,
+                currentQuoteIndex: (prev.currentQuoteIndex + 1) % prev.quotes.length
+              }))}
+              className="px-3 py-1 bg-white bg-opacity-60 rounded text-sm hover:bg-opacity-80 transition-all"
+            >
+              192
+            </button>
+          </div>
+        </div>
+        
+        {/* Settings Button */}
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="fixed top-4 right-4 p-3 bg-white bg-opacity-80 rounded-lg shadow-lg hover:bg-opacity-100 transition-all"
+        >
+          699e0f
+        </button>
+        
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl p-6 overflow-y-auto z-20">
+            <h2 className="text-2xl font-bold mb-6">Settings</h2>
+            
+            {/* Background Settings */}
+          
