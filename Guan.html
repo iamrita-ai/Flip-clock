@@ -1,0 +1,951 @@
+# HTML Flip Clock with Timer, Stopwatch & Study Features
+
+Here's a comprehensive HTML code for your Serena-branded flip clock with all the requested features:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Serena - Focus Flip Clock</title>
+<style>
+:root {
+--primary-color: #ff9eb5;
+--secondary-color: #ff6b8b;
+--text-color: #333;
+--bg-blur: 5px;
+}
+
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: 'Arial', sans-serif;
+}
+
+body {
+background-color: var(--primary-color);
+background-size: cover;
+background-position: center;
+background-attachment: fixed;
+min-height: 100vh;
+position: relative;
+overflow-x: hidden;
+}
+
+.background-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background-color: rgba(255, 255, 255, 0.3);
+backdrop-filter: blur(var(--bg-blur));
+z-index: -1;
+}
+
+.container {
+max-width: 1200px;
+margin: 0 auto;
+padding: 20px;
+}
+
+.brand-header {
+text-align: center;
+margin: 20px 0;
+position: relative;
+z-index: 10;
+}
+
+.brand-name {
+font-size: 3rem;
+font-weight: bold;
+color: var(--text-color);
+text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+margin-bottom: 10px;
+}
+
+.quote-container {
+background-color: rgba(255, 255, 255, 0.7);
+padding: 20px;
+border-radius: 15px;
+margin: 20px auto;
+max-width: 800px;
+position: relative;
+box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.quote-text {
+font-size: 1.5rem;
+font-style: italic;
+color: var(--text-color);
+margin-bottom: 10px;
+line-height: 1.5;
+}
+
+.quote-author {
+font-size: 1.1rem;
+font-weight: bold;
+text-align: right;
+color: var(--secondary-color);
+}
+
+.quote-controls {
+display: flex;
+justify-content: center;
+margin-top: 15px;
+}
+
+.btn {
+background-color: var(--secondary-color);
+color: white;
+border: none;
+padding: 10px 20px;
+margin: 0 5px;
+border-radius: 25px;
+cursor: pointer;
+font-weight: bold;
+transition: all 0.3s ease;
+}
+
+.btn:hover {
+background-color: #ff4777;
+transform: translateY(-2px);
+box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.clock-container {
+background-color: rgba(255, 255, 255, 0.8);
+padding: 30px;
+border-radius: 20px;
+margin: 30px auto;
+max-width: 800px;
+box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+position: relative;
+}
+
+.mode-selector {
+display: flex;
+justify-content: center;
+margin-bottom: 20px;
+}
+
+.mode-btn {
+padding: 10px 20px;
+margin: 0 5px;
+border: none;
+border-radius: 25px;
+background-color: #e0e0e0;
+cursor: pointer;
+font-weight: bold;
+transition: all 0.3s ease;
+}
+
+.mode-btn.active {
+background-color: var(--secondary-color);
+color: white;
+}
+
+.flip-clock {
+display: flex;
+justify-content: center;
+align-items: center;
+margin: 20px 0;
+gap: 10px;
+}
+
+.flip-digit {
+position: relative;
+width: 80px;
+height: 120px;
+perspective: 400px;
+margin: 0 5px;
+}
+
+.flip-card {
+position: absolute;
+width: 100%;
+height: 100%;
+transform-style: preserve-3d;
+transition: transform 0.6s;
+border-radius: 10px;
+box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.flip-card.flipped {
+transform: rotateX(-180deg);
+}
+
+.flip-card-front, .flip-card-back {
+position: absolute;
+width: 100%;
+height: 100%;
+backface-visibility: hidden;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 3rem;
+font-weight: bold;
+border-radius: 10px;
+}
+
+.flip-card-front {
+background-color: #f0f0f0;
+color: var(--text-color);
+border: 2px solid #ddd;
+}
+
+.flip-card-back {
+background-color: var(--primary-color);
+color: white;
+border: 2px solid var(--secondary-color);
+transform: rotateX(180deg);
+}
+
+.separator {
+font-size: 3rem;
+font-weight: bold;
+color: var(--text-color);
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+.manual-input {
+display: flex;
+justify-content: center;
+align-items: center;
+margin: 20px 0;
+gap: 10px;
+}
+
+.time-input {
+width: 60px;
+padding: 10px;
+border: 2px solid #ddd;
+border-radius: 8px;
+text-align: center;
+font-size: 1.2rem;
+}
+
+.time-label {
+font-weight: bold;
+margin: 0 5px;
+}
+
+.clock-controls {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+gap: 15px;
+margin-top: 20px;
+}
+
+.sidebar {
+position: fixed;
+top: 0;
+right: -300px;
+width: 300px;
+height: 100vh;
+background-color: rgba(255, 255, 255, 0.95);
+padding: 20px;
+box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+transition: right 0.3s ease;
+z-index: 100;
+overflow-y: auto;
+}
+
+.sidebar.open {
+right: 0;
+}
+
+.sidebar-toggle {
+position: fixed;
+top: 20px;
+right: 20px;
+background-color: var(--secondary-color);
+color: white;
+border: none;
+width: 50px;
+height: 50px;
+border-radius: 50%;
+cursor: pointer;
+z-index: 101;
+font-size: 1.5rem;
+box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.sidebar-section {
+margin-bottom: 30px;
+padding-bottom: 20px;
+border-bottom: 1px solid #eee;
+}
+
+.sidebar-title {
+font-size: 1.3rem;
+font-weight: bold;
+margin-bottom: 15px;
+color: var(--text-color);
+}
+
+.color-options {
+display: flex;
+flex-wrap: wrap;
+gap: 10px;
+}
+
+.color-option {
+width: 30px;
+height: 30px;
+border-radius: 50%;
+cursor: pointer;
+border: 2px solid transparent;
+transition: transform 0.2s ease;
+}
+
+.color-option.selected {
+border-color: #333;
+transform: scale(1.1);
+}
+
+.blur-control {
+display: flex;
+align-items: center;
+gap: 15px;
+margin: 15px 0;
+}
+
+.sound-option {
+display: flex;
+align-items: center;
+margin: 10px 0;
+padding: 10px;
+background-color: #f5f5f5;
+border-radius: 8px;
+cursor: pointer;
+transition: background-color 0.2s ease;
+}
+
+.sound-option:hover {
+background-color: #eaeaea;
+}
+
+.sound-option input {
+margin-right: 10px;
+}
+
+.upload-btn {
+display: block;
+width: 100%;
+padding: 12px;
+background-color: var(--secondary-color);
+color: white;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+margin: 15px 0;
+font-weight: bold;
+transition: background-color 0.3s ease;
+}
+
+.upload-btn:hover {
+background-color: #ff4777;
+}
+
+.file-input {
+display: none;
+}
+
+@media (max-width: 768px) {
+.flip-clock {
+transform: scale(0.8);
+}
+
+.brand-name {
+font-size: 2rem;
+}
+}
+</style>
+</head>
+<body>
+<div class="background-overlay"></div>
+
+<div class="container">
+<header class="brand-header">
+<h1 class="brand-name">Serena</h1>
+</header>
+
+<div class="quote-container">
+<p class="quote-text" id="current-quote">The secret of getting ahead is getting started.</p>
+<p class="quote-author" id="quote-author">— Mark Twain</p>
+<div class="quote-controls">
+<button class="btn" id="prev-quote">Previous</button>
+<button class="btn" id="next-quote">Next Quote</button>
+</div>
+</div>
+
+<div class="clock-container">
+<div class="mode-selector">
+<button class="mode-btn active" data-mode="timer">Timer</button>
+<button class="mode-btn" data-mode="stopwatch">Stopwatch</button>
+</div>
+
+<div class="flip-clock">
+<div class="flip-digit">
+<div class="flip-card">
+<div class="flip-card-front">0</div>
+<div class="flip-card-back">1</div>
+</div>
+</div>
+<div class="flip-digit">
+<div class="flip-card">
+<div class="flip-card-front">0</div>
+<div class="flip-card-back">1</div>
+</div>
+</div>
+<div class="separator">:</div>
+<div class="flip-digit">
+<div class="flip-card">
+<div class="flip-card-front">0</div>
+<div class="flip-card-back">1</div>
+</div>
+</div>
+<div class="flip-digit">
+<div class="flip-card">
+<div class="flip-card-front">0</div>
+<div class="flip-card-back">1</div>
+</div>
+</div>
+<div class="separator">:</div>
+<div class="flip-digit">
+<div class="flip-card">
+<div class="flip-card-front">0</div>
+<div class="flip-card-back">1</div>
+</div>
+</div>
+<div class="flip-digit">
+<div class="flip-card">
+<div class="flip-card-front">0</div>
+<div class="flip-card-back">1</div>
+</div>
+</div>
+</div>
+
+<div class="manual-input">
+<input type="number" class="time-input" id="hours" min="0" max="99" value="00">
+<span class="time-label">Hrs</span>
+<input type="number" class="time-input" id="minutes" min="0" max="59" value="00">
+<span class="time-label">Min</span>
+<input type="number" class="time-input" id="seconds" min="0" max="59" value="00">
+<span class="time-label">Sec</span>
+</div>
+
+<div class="clock-controls">
+<button class="btn" id="start-btn">Start</button>
+<button class="btn" id="pause-btn">Pause</button>
+<button class="btn" id="reset-btn">Reset</button>
+<button class="btn" id="set-btn">Set Time</button>
+</div>
+</div>
+</div>
+
+<button class="sidebar-toggle" id="sidebar-toggle">⚙️</button>
+
+<div class="sidebar" id="settings-sidebar">
+<h2 class="sidebar-title">Serena Settings</h2>
+
+<div class="sidebar-section">
+<h3 class="sidebar-title">Background Colors</h3>
+<div class="color-options">
+<div class="color-option selected" style="background-color: #ff9eb5;" data-color="#ff9eb5"></div>
+<div class="color-option" style="background-color: #ffb3ba;" data-color="#ffb3ba"></div>
+<div class="color-option" style="background-color: #ffc6c7;" data-color="#ffc6c7"></div>
+<div class="color-option" style="background-color: #ffafcc;" data-color="#ffafcc"></div>
+<div class="color-option" style="background-color: #e2afff;" data-color="#e2afff"></div>
+<div class="color-option" style="background-color: #a8d5ff;" data-color="#a8d5ff"></div>
+<div class="color-option" style="background-color: #b9fbc0;" data-color="#b9fbc0"></div>
+<div class="color-option" style="background-color: #fff4a3;" data-color="#fff4a3"></div>
+</div>
+</div>
+
+<div class="sidebar-section">
+<h3 class="sidebar-title">Background Image</h3>
+<input type="file" id="background-upload" class="file-input" accept="image/*">
+<button class="upload-btn" id="upload-trigger">Upload Image</button>
+</div>
+
+<div class="sidebar-section">
+<h3 class="sidebar-title">Blur Intensity</h3>
+<div class="blur-control">
+<span>Low</span>
+<input type="range" id="blur-slider" min="0" max="20" value="5">
+<span>High</span>
+</div>
+<div id="blur-value">5px</div>
+</div>
+
+<div class="sidebar-section">
+<h3 class="sidebar-title">Flip Sound</h3>
+<div class="sound-option">
+<input type="radio" name="flip-sound" id="sound1" value="beep1" checked>
+<label for="sound1">Soft Beep</label>
+</div>
+<div class="sound-option">
+<input type="radio" name="flip-sound" id="sound2" value="beep2">
+<label for="sound2">Click Sound</label>
+</div>
+<div class="sound-option">
+<input type="radio" name="flip-sound" id="sound3" value="flip">
+<label for="sound3">Page Flip</label>
+</div>
+<div class="sound-option">
+<input type="radio" name="flip-sound" id="sound4" value="tick">
+<label for="sound4">Mechanical Tick</label>
+</div>
+</div>
+
+<div class="sidebar-section">
+<h3 class="sidebar-title">Focus Sounds</h3>
+<div class="sound-option">
+<input type="radio" name="focus-sound" id="focus1" value="none">
+<label for="focus1">None</label>
+</div>
+<div class="sound-option">
+<input type="radio" name="focus-sound" id="focus2" value="rain">
+<label for="focus2">Gentle Rain</label>
+</div>
+<div class="sound-option">
+<input type="radio" name="focus-sound" id="focus3" value="piano">
+<label for="focus3">Calming Piano</label>
+</div>
+<div class="sound-option">
+<input type="radio" name="focus-sound" id="focus4" value="thunder">
+<label for="focus4">Thunder + Rain</label>
+</div>
+<div class="sound-option">
+<input type="radio" name="focus-sound" id="focus5" value="waves">
+<label for="focus5">Ocean Waves</label>
+</div>
+<div class="sound-option">
+<input type="radio" name="focus-sound" id="focus6" value="forest">
+<label for="focus6">Forest Ambience</label>
+</div>
+<input type="file" id="custom-sound-upload" class="file-input" accept="audio/*">
+<button class="upload-btn" id="custom-sound-trigger">Upload Custom Sound</button>
+</div>
+</div>
+
+<!-- Audio elements for sounds -->
+<audio id="flip-sound-1" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3"></audio>
+<audio id="flip-sound-2" src="https://assets.mixkit.co/sfx/preview/mixkit-modern-click-box-check-1120.mp3"></audio>
+<audio id="flip-sound-3" src="https://assets.mixkit.co/sfx/preview/mixkit-page-flip-soft-smooth-1437.mp3"></audio>
+<audio id="flip-sound-4" src="https://assets.mixkit.co/sfx/preview/mixkit-small-hit-in-a-hard-surface-2120.mp3"></audio>
+
+<!-- Placeholder audio elements for focus sounds -->
+<audio id="focus-sound-rain"></audio>
+<audio id="focus-sound-piano"></audio>
+<audio id="focus-sound-thunder"></audio>
+<audio id="focus-sound-waves"></audio>
+<audio id="focus-sound-forest"></audio>
+<audio id="custom-focus-sound"></audio>
+
+<script>
+// Quotes data
+const quotes = [
+{ text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+{ text: "Don't let what you cannot do interfere with what you can do.", author: "John Wooden" },
+{ text: "Success is the sum of small efforts, repeated day in and day out.", author: "Robert Collier" },
+{ text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+{ text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+{ text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+{ text: "Your time is limited, don't waste it living someone else's life.", author: "Steve Jobs" },
+{ text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
+{ text: "The expert in anything was once a beginner.", author: "Helen Hayes" },
+{ text: "The only place where success comes before work is in the dictionary.", author: "Vidal Sassoon" }
+];
+
+let currentQuoteIndex = 0;
+let timer;
+let secondsLeft = 0;
+let isRunning = false;
+let isStopwatchMode = false;
+let stopwatchTime = 0;
+
+// DOM Elements
+const currentQuoteEl = document.getElementById('current-quote');
+const quoteAuthorEl = document.getElementById('quote-author');
+const prevQuoteBtn = document.getElementById('prev-quote');
+const nextQuoteBtn = document.getElementById('next-quote');
+const modeButtons = document.querySelectorAll('.mode-btn');
+const startBtn = document.getElementById('start-btn');
+const pauseBtn = document.getElementById('pause-btn');
+const resetBtn = document.getElementById('reset-btn');
+const setBtn = document.getElementById('set-btn');
+const hoursInput = document.getElementById('hours');
+const minutesInput = document.getElementById('minutes');
+const secondsInput = document.getElementById('seconds');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+const settingsSidebar = document.getElementById('settings-sidebar');
+const colorOptions = document.querySelectorAll('.color-option');
+const blurSlider = document.getElementById('blur-slider');
+const blurValue = document.getElementById('blur-value');
+const uploadTrigger = document.getElementById('upload-trigger');
+const backgroundUpload = document.getElementById('background-upload');
+const customSoundTrigger = document.getElementById('custom-sound-trigger');
+const customSoundUpload = document.getElementById('custom-sound-upload');
+const flipSoundOptions = document.querySelectorAll('input[name="flip-sound"]');
+const focusSoundOptions = document.querySelectorAll('input[name="focus-sound"]');
+
+// Audio elements
+const flipSound1 = document.getElementById('flip-sound-1');
+const flipSound2 = document.getElementById('flip-sound-2');
+const flipSound3 = document.getElementById('flip-sound-3');
+const flipSound4 = document.getElementById('flip-sound-4');
+const focusSoundRain = document.getElementById('focus-sound-rain');
+const focusSoundPiano = document.getElementById('focus-sound-piano');
+const focusSoundThunder = document.getElementById('focus-sound-thunder');
+const focusSoundWaves = document.getElementById('focus-sound-waves');
+const focusSoundForest = document.getElementById('focus-sound-forest');
+const customFocusSound = document.getElementById('custom-focus-sound');
+
+// Initialize
+function init() {
+updateQuote();
+setupEventListeners();
+updateClockDisplay(0, 0, 0);
+}
+
+// Event Listeners
+function setupEventListeners() {
+// Quote navigation
+prevQuoteBtn.addEventListener('click', showPrevQuote);
+nextQuoteBtn.addEventListener('click', showNextQuote);
+
+// Mode selection
+modeButtons.forEach(btn => {
+btn.addEventListener('click', () => {
+modeButtons.forEach(b => b.classList.remove('active'));
+btn.classList.add('active');
+
+isStopwatchMode = btn.dataset.mode === 'stopwatch';
+resetClock();
+});
+});
+
+// Clock controls
+startBtn.addEventListener('click', startClock);
+pauseBtn.addEventListener('click', pauseClock);
+resetBtn.addEventListener('click', resetClock);
+setBtn.addEventListener('click', setTime);
+
+// Sidebar toggle
+sidebarToggle.addEventListener('click', () => {
+settingsSidebar.classList.toggle('open');
+});
+
+// Color options
+colorOptions.forEach(option => {
+option.addEventListener('click', () => {
+colorOptions.forEach(o => o.classList.remove('selected'));
+option.classList.add('selected');
+document.body.style.backgroundColor = option.dataset.color;
+});
+});
+
+// Blur control
+blurSlider.addEventListener('input', () => {
+const value = blurSlider.value;
+document.documentElement.style.setProperty('--bg-blur', `${value}px`);
+blurValue.textContent = `${value}px`;
+});
+
+// Background upload
+uploadTrigger.addEventListener('click', () => {
+backgroundUpload.click();
+});
+
+backgroundUpload.addEventListener('change', (e) => {
+if (e.target.files && e.target.files[0]) {
+const reader = new FileReader();
+reader.onload = (event) => {
+document.body.style.backgroundImage = `url(${event.target.result})`;
+};
+reader.readAsDataURL(e.target.files[0]);
+}
+});
+
+// Custom sound upload
+customSoundTrigger.addEventListener('click', () => {
+customSoundUpload.click();
+});
+
+customSoundUpload.addEventListener('change', (e) => {
+if (e.target.files && e.target.files[0]) {
+const url = URL.createObjectURL(e.target.files[0]);
+customFocusSound.src = url;
+
+// Select the custom sound option
+document.getElementById('focus6').checked = true;
+playFocusSound('custom');
+}
+});
+
+// Sound options
+flipSoundOptions.forEach(option => {
+option.addEventListener('change', () => {
+// Test the selected flip sound
+playFlipSound();
+});
+});
+
+focusSoundOptions.forEach(option => {
+option.addEventListener('change', () => {
+playFocusSound(option.value);
+});
+});
+}
+
+// Quote Functions
+function updateQuote() {
+currentQuoteEl.textContent = quotes[currentQuoteIndex].text;
+quoteAuthorEl.textContent = `— ${quotes[currentQuoteIndex].author}`;
+}
+
+function showNextQuote() {
+currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+updateQuote();
+}
+
+function showPrevQuote() {
+currentQuoteIndex = (currentQuoteIndex - 1 + quotes.length) % quotes.length;
+updateQuote();
+}
+
+// Clock Functions
+function startClock() {
+if (isRunning) return;
+
+isRunning = true;
+
+if (isStopwatchMode) {
+const startTime = Date.now() - stopwatchTime * 1000;
+timer = setInterval(() => {
+stopwatchTime = Math.floor((Date.now() - startTime) / 1000);
+const h = Math.floor(stopwatchTime / 3600);
+const m = Math.floor((stopwatchTime % 3600) / 60);
+const s = stopwatchTime % 60;
+updateClockDisplay(h, m, s);
+playFlipSound();
+}, 1000);
+} else {
+// Timer mode
+if (secondsLeft <= 0) {
+// Set initial time if not already set
+secondsLeft = parseInt(hoursInput.value) * 3600 +
+parseInt(minutesInput.value) * 60 +
+parseInt(secondsInput.value);
+if (secondsLeft <= 0) {
+secondsLeft = 60; // Default to 1 minute
+updateInputs(0, 1, 0);
+}
+}
+
+timer = setInterval(() => {
+if (secondsLeft <= 0) {
+clearInterval(timer);
+isRunning = false;
+alert("Time's up!");
+return;
+}
+
+secondsLeft--;
+const h = Math.floor(secondsLeft / 3600);
+const m = Math.floor((secondsLeft % 3600) / 60);
+const s = secondsLeft % 60;
+updateClockDisplay(h, m, s);
+updateInputs(h, m, s);
+playFlipSound();
+}, 1000);
+}
+}
+
+function pauseClock() {
+clearInterval(timer);
+isRunning = false;
+}
+
+function resetClock() {
+clearInterval(timer);
+isRunning = false;
+
+if (isStopwatchMode) {
+stopwatchTime = 0;
+updateClockDisplay(0, 0, 0);
+} else {
+secondsLeft = 0;
+updateClockDisplay(0, 0, 0);
+updateInputs(0, 0, 0);
+}
+}
+
+function setTime() {
+if (isRunning) return;
+
+const h = parseInt(hoursInput.value) || 0;
+const m = parseInt(minutesInput.value) || 0;
+const s = parseInt(secondsInput.value) || 0;
+
+if (isStopwatchMode) {
+stopwatchTime = h * 3600 + m * 60 + s;
+updateClockDisplay(h, m, s);
+} else {
+secondsLeft = h * 3600 + m * 60 + s;
+updateClockDisplay(h, m, s);
+}
+}
+
+function updateClockDisplay(hours, minutes, seconds) {
+const digits = [
+Math.floor(hours / 10),
+hours % 10,
+Math.floor(minutes / 10),
+minutes % 10,
+Math.floor(seconds / 10),
+seconds % 10
+];
+
+const flipDigits = document.querySelectorAll('.flip-digit');
+
+flipDigits.forEach((digit, i) => {
+const card = digit.querySelector('.flip-card');
+const front = card.querySelector('.flip-card-front');
+const back = card.querySelector('.flip-card-back');
+
+// Only flip if the digit is changing
+if (parseInt(front.textContent) !== digits[i]) {
+back.textContent = digits[i];
+card.classList.add('flipped');
+
+setTimeout(() => {
+front.textContent = digits[i];
+card.classList.remove('flipped');
+}, 600);
+}
+});
+}
+
+function updateInputs(hours, minutes, seconds) {
+hoursInput.value = hours.toString().padStart(2, '0');
+minutesInput.value = minutes.toString().padStart(2, '0');
+secondsInput.value = seconds.toString().padStart(2, '0');
+}
+
+// Sound Functions
+function playFlipSound() {
+let selectedSound;
+flipSoundOptions.forEach(option => {
+if (option.checked) {
+switch(option.value) {
+case 'beep1': selectedSound = flipSound1; break;
+case 'beep2': selectedSound = flipSound2; break;
+case 'flip': selectedSound = flipSound3; break;
+case 'tick': selectedSound = flipSound4; break;
+}
+}
+});
+
+if (selectedSound) {
+selectedSound.currentTime = 0;
+selectedSound.play().catch(e => console.log("Audio play error:", e));
+}
+}
+
+function playFocusSound(soundType) {
+// Stop all focus sounds first
+focusSoundRain.pause();
+focusSoundPiano.pause();
+focusSoundThunder.pause();
+focusSoundWaves.pause();
+focusSoundForest.pause();
+customFocusSound.pause();
+
+focusSoundRain.currentTime = 0;
+focusSoundPiano.currentTime = 0;
+focusSoundThunder.currentTime = 0;
+focusSoundWaves.currentTime = 0;
+focusSoundForest.currentTime = 0;
+customFocusSound.currentTime = 0;
+
+let selectedSound;
+
+switch(soundType) {
+case 'rain':
+focusSoundRain.src = "https://assets.mixkit.co/sfx/preview/mixkit-rain-on-the-windows-1539.mp3";
+selectedSound = focusSoundRain;
+break;
+case 'piano':
+focusSoundPiano.src = "https://assets.mixkit.co/sfx/preview/mixkit-happy-bells-chimes-1179.mp3";
+selectedSound = focusSoundPiano;
+break;
+case 'thunder':
+focusSoundThunder.src = "https://assets.mixkit.co/sfx/preview/mixkit-stormy-moody-rain-1161.mp3";
+selectedSound = focusSoundThunder;
+break;
+case 'waves':
+focusSoundWaves.src = "https://assets.mixkit.co/sfx/preview/mixkit-sea-waves-loop-1169.mp3";
+selectedSound = focusSoundWaves;
+break;
+case 'forest':
+focusSoundForest.src = "https://assets.mixkit.co/sfx/preview/mixkit-forest-birds-ambience-1211.mp3";
+selectedSound = focusSoundForest;
+break;
+case 'custom':
+selectedSound = customFocusSound;
+break;
+}
+
+if (selectedSound && soundType !== 'none') {
+selectedSound.loop = true;
+selectedSound.volume = 0.5;
+selectedSound.play().catch(e => console.log("Audio play error:", e));
+}
+}
+
+// Initialize the app
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
+```
+
+## Features Included:
+
+1. **Flip Clock Design** - With animated flipping effect when time changes
+2. **Timer & Stopwatch Modes** - Toggle between modes with dedicated buttons
+3. **Manual Time Input** - Set hours, minutes, seconds via input fields
+4. **Customizable Background**:
+- Multiple pastel color options (pink, red, purple, blue, etc.)
+- Upload custom background images
+- Adjustable blur intensity via slider
+
+5. **Serena Branding**:
+- "Serena" prominently displayed at the top
+- Motivational quotes positioned below the brand name
+
+6. **Quote System**:
+- 10 motivational quotes for students
+- Previous/Next buttons to navigate between quotes
+
+7. **Sound Options**:
+- Flip sounds (soft beep, click, page flip, mechanical tick)
+- Focus/Study sounds (rain, piano, thunder+rain, ocean waves, forest)
+- Upload custom background music from device
+
+8. **Responsive Design** - Works on different screen sizes
+
+9. **Controls**:
+- Start, Pause, Reset buttons
+- Set Time button to apply manual input
+
+To use this code, simply copy it into an HTML file and open it in a modern browser. Note that for security reasons, some browsers may restrict local file uploads or autoplay of audio files until the user interacts with the page.
